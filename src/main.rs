@@ -2,7 +2,7 @@ use csv::{ReaderBuilder, Trim};
 use std::fs::File;
 use tracing::{Level, debug, error, info};
 use tracing_subscriber::EnvFilter;
-use types::TransactionRecord;
+use types::{TransactionRecord, TransactionType};
 
 mod types;
 
@@ -16,6 +16,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     debug!("Binary arguments: {:?}", args);
 
+    // Check if input file was passed as an argument
     if args.len() < 2 {
         error!("Input file has not been provided");
         return;
@@ -31,6 +32,7 @@ fn main() {
         .trim(Trim::All)
         .from_reader(file);
 
+    // Process each transaction from the input file
     for line in reader.deserialize() {
         let record: TransactionRecord = match line {
             Ok(record) => record,
@@ -41,5 +43,9 @@ fn main() {
         };
 
         debug!("Transaction record: {record:?}");
+
+        let transaction = TransactionType::from_transaction_record(record);
+
+        info!("Processing transaction {transaction:?}");
     }
 }

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 csv = "1.4.0"
+rust_decimal = "1.39"
 serde =  { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 tracing = "0.1"
