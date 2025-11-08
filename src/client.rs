@@ -1,14 +1,15 @@
+use crate::types::DECIMAL_PRECISION;
 use rust_decimal::Decimal;
-use tracing::info;
+use tracing::{error, info};
 
-/// Type containing all the information needed for a client account.
+/// Type containing all the information needed for a client account
 #[derive(Debug, Default)]
 pub struct Client {
-    client: u16,
-    available: Decimal,
-    held: Decimal,
-    total: Decimal,
-    locked: bool,
+    pub client: u16,
+    pub available: Decimal,
+    pub held: Decimal,
+    pub total: Decimal,
+    pub locked: bool,
 }
 
 impl Client {
@@ -19,9 +20,31 @@ impl Client {
         }
     }
 
-    pub fn deposit(&mut self, amount: Decimal) {
+    /// Handle deposit for current client
+    pub fn deposit(&mut self, amount: Decimal) -> Result<(), String> {
         info!("Deposit - client {}, amount {}", self.client, amount);
+
+        if amount < Decimal::new(0, DECIMAL_PRECISION) {
+            return Err("Negative amount".to_string());
+        }
+
         self.available += amount;
         self.total += amount;
+
+        Ok(())
+    }
+
+    /// Handle withdrawal for current client
+    pub fn withdrawal(&mut self, amount: Decimal) -> Result<(), String> {
+        info!("Withdrawal - client {}, amount {}", self.client, amount);
+
+        if self.available < amount {
+            return Err("Insufficient funds".to_string());
+        }
+
+        self.available -= amount;
+        self.total -= amount;
+
+        Ok(())
     }
 }

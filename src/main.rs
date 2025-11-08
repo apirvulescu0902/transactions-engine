@@ -1,4 +1,5 @@
 use csv::{ReaderBuilder, Trim};
+use engine::TransactionsEngine;
 use std::fs::File;
 use tracing::{Level, debug, error, info};
 use tracing_subscriber::EnvFilter;
@@ -34,6 +35,8 @@ fn main() {
         .trim(Trim::All)
         .from_reader(file);
 
+    let mut transactions_engine = TransactionsEngine::new();
+
     // Process each transaction from the input file
     for line in reader.deserialize() {
         let record: TransactionRecord = match line {
@@ -46,8 +49,24 @@ fn main() {
 
         debug!("Transaction record: {record:?}");
 
-        let transaction = TransactionType::from_transaction_record(record);
+        let transaction = match TransactionType::from_transaction_record(record.clone()) {
+            Ok(transaction) => transaction,
+            Err(err) => {
+                error!(
+                    "Could not map transaction record {record:?} to a type: {err:?}. Skipping it."
+                );
+                continue;
+            }
+        };
 
         info!("Processing transaction {transaction:?}");
+
+        if let Err(err) = transactions_engine.process_transaction(transaction.clone()) {
+            error!("Could not process transaction {transaction:?}: {err:?}")
+        }
     }
+
+    // Write the current state
+    info!("Printing the current state");
+    transactions_engine.print_current_state();
 }

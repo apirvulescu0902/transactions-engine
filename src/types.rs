@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 /// Decimal precision for amounts
-const DECIMAL_PRECISION: u32 = 4;
+pub const DECIMAL_PRECISION: u32 = 4;
 
 /// Transaction information read from the input file.
 #[derive(Debug, Clone, Deserialize, Serialize)]
