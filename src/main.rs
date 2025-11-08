@@ -4,6 +4,8 @@ use tracing::{Level, debug, error, info};
 use tracing_subscriber::EnvFilter;
 use types::{TransactionRecord, TransactionType};
 
+mod client;
+mod engine;
 mod types;
 
 fn main() {
