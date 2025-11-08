@@ -19,16 +19,33 @@ impl TransactionsEngine {
     /// Process a given transaction
     pub fn process_transaction(&mut self, transaction: TransactionType) -> Result<(), String> {
         match transaction {
-            TransactionType::Deposit { client, tx, amount } => self
+            TransactionType::Deposit { client, tx, amount } => {
+                let client = self.clients.entry(client).or_insert(Client::new(client));
+
+                client.deposit(amount, tx)?;
+                client.processed_transactions.insert(tx, transaction);
+            }
+            TransactionType::Withdrawal { client, tx, amount } => {
+                let client = self.clients.entry(client).or_insert(Client::new(client));
+
+                client.withdrawal(amount, tx)?;
+                client.processed_transactions.insert(tx, transaction);
+            }
+            TransactionType::Dispute { client, tx } => self
                 .clients
                 .entry(client)
                 .or_insert(Client::new(client))
-                .deposit(amount)?,
-            TransactionType::Withdrawal { client, tx, amount } => self
+                .dispute(tx)?,
+            TransactionType::Resolve { client, tx } => self
                 .clients
                 .entry(client)
                 .or_insert(Client::new(client))
-                .withdrawal(amount)?,
+                .resolve(tx)?,
+            TransactionType::Chargeback { client, tx } => self
+                .clients
+                .entry(client)
+                .or_insert(Client::new(client))
+                .chargeback(tx)?,
             _ => (),
         }
 

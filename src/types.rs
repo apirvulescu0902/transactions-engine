@@ -7,10 +7,14 @@ pub const DECIMAL_PRECISION: u32 = 4;
 /// Transaction information read from the input file.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TransactionRecord {
+    /// Type of the transaction
     #[serde(rename = "type")]
     pub transaction_type: String,
+    /// Client id
     pub client: u16,
+    /// Transaction id
     pub tx: u32,
+    /// Amount of money
     pub amount: Option<String>,
 }
 
