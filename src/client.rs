@@ -31,12 +31,22 @@ impl Client {
         }
     }
 
+    fn check_if_locked(&self) -> Result<(), String> {
+        if self.locked {
+            return Err("Account is locked, cannot process transaction".to_string());
+        }
+
+        Ok(())
+    }
+
     /// Handle deposit for current client
     pub fn deposit(&mut self, amount: Decimal, tx: u32) -> Result<(), String> {
         info!(
             "Deposit - client {}, tx {}, amount {}",
             self.client, tx, amount
         );
+
+        self.check_if_locked()?;
 
         if self.processed_transactions.contains_key(&tx) {
             return Err("Transaction already processed".to_string());
@@ -59,6 +69,8 @@ impl Client {
             self.client, tx, amount
         );
 
+        self.check_if_locked()?;
+
         if self.processed_transactions.contains_key(&tx) {
             return Err("Transaction already processed".to_string());
         }
@@ -80,6 +92,8 @@ impl Client {
     /// Handle dispute for current client and given transaction id
     pub fn dispute(&mut self, tx: u32) -> Result<(), String> {
         info!("Dispute - client {}, tx {}", self.client, tx);
+
+        self.check_if_locked()?;
 
         if self.disputed_transactions.contains(&tx) {
             return Err("Transaction already disputed".to_string());
@@ -109,6 +123,8 @@ impl Client {
     pub fn resolve(&mut self, tx: u32) -> Result<(), String> {
         info!("Resolve - client {}, tx {}", self.client, tx);
 
+        self.check_if_locked()?;
+
         let transaction = self
             .processed_transactions
             .get(&tx)
@@ -134,6 +150,8 @@ impl Client {
     /// Performs chargeback for given transaction and locks the account
     pub fn chargeback(&mut self, tx: u32) -> Result<(), String> {
         info!("Chargeback - client {}, tx {}", self.client, tx);
+
+        self.check_if_locked()?;
 
         let transaction = self
             .processed_transactions
@@ -316,5 +334,8 @@ mod tests {
         assert_eq!(client.total, Decimal::new(0, 0));
 
         assert!(client.chargeback(tx).is_err());
+
+        // check that the account is now locked
+        assert!(client.deposit(Decimal::new(1, 0), 10).is_err());
     }
 }
