@@ -56,11 +56,11 @@ impl TransactionsEngine {
     pub fn print_current_state(&self) {
         let mut writer = Writer::from_writer(std::io::stdout());
 
-        if let Err(err) = writer.write_record(&["client", "available", "held", "total", "locked"]) {
+        if let Err(err) = writer.write_record(["client", "available", "held", "total", "locked"]) {
             error!("Could not write record: {err:?}");
         }
 
-        for (_, client_data) in &self.clients {
+        for client_data in self.clients.values() {
             if let Err(err) = writer.write_record(&[
                 client_data.client.to_string(),
                 client_data.available.to_string(),

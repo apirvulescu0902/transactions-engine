@@ -63,6 +63,10 @@ impl Client {
             return Err("Transaction already processed".to_string());
         }
 
+        if amount < Decimal::new(0, DECIMAL_PRECISION) {
+            return Err("Negative amount".to_string());
+        }
+
         if self.available < amount {
             return Err("Insufficient funds".to_string());
         }
@@ -152,5 +156,165 @@ impl Client {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+
+    use crate::types::TransactionType;
+
+    use super::Client;
+
+    #[test]
+    fn test_deposit() {
+        let client_id = 1;
+        let tx = 1;
+        let amount = Decimal::new(2, 4);
+        let mut client = Client::new(client_id);
+        let transaction = TransactionType::Deposit {
+            client: client_id,
+            tx,
+            amount,
+        };
+
+        client.deposit(amount, tx).expect("Deposit failed.");
+
+        assert_eq!(client.available, amount);
+        assert_eq!(client.total, amount);
+        assert_eq!(client.held, Decimal::new(0, 4));
+
+        client.processed_transactions.insert(tx, transaction);
+
+        // try to process the same transaction again
+        assert!(client.deposit(amount, tx).is_err());
+
+        let tx2 = 2;
+        let amount2 = Decimal::new(1, 4);
+
+        client.deposit(amount2, tx2).expect("Deposit failed.");
+
+        assert_eq!(client.available, amount + amount2);
+        assert_eq!(client.total, amount + amount2);
+        assert_eq!(client.held, Decimal::new(0, 4));
+
+        // try to deposit a negative amount
+        assert!(client.deposit(Decimal::new(-1, 4), 3).is_err());
+    }
+
+    #[test]
+    fn test_withdrawal() {
+        let client_id = 1;
+        let mut client = Client::new(client_id);
+
+        client
+            .deposit(Decimal::new(4, 4), 1)
+            .expect("Deposit failed.");
+
+        client
+            .withdrawal(Decimal::new(2, 4), 2)
+            .expect("Withdrawal failed");
+
+        assert_eq!(client.available, Decimal::new(2, 4));
+        assert_eq!(client.total, Decimal::new(2, 4));
+        assert_eq!(client.held, Decimal::new(0, 4));
+
+        // negative amount
+        assert!(client.withdrawal(Decimal::new(-1, 4), 3).is_err());
+
+        // insufficient funds
+        assert!(client.withdrawal(Decimal::new(5, 4), 4).is_err());
+    }
+
+    #[test]
+    fn test_dispute() {
+        let client_id = 1;
+        let tx = 1;
+        let amount = Decimal::new(2, 0);
+        let mut client = Client::new(client_id);
+
+        // try to dispute a transaction that does not exist
+        assert!(client.dispute(tx).is_err());
+
+        let transaction = TransactionType::Deposit {
+            client: client_id,
+            tx,
+            amount,
+        };
+        client.deposit(amount, tx).expect("Deposit failed.");
+        client.processed_transactions.insert(tx, transaction);
+
+        client.dispute(tx).expect("Could not dispute transaction.");
+
+        assert_eq!(client.available, Decimal::new(0, 0));
+        assert_eq!(client.held, amount);
+        assert!(client.disputed_transactions.contains(&tx));
+    }
+
+    #[test]
+    fn test_resolve() {
+        let client_id = 1;
+        let tx = 1;
+        let amount = Decimal::new(2, 0);
+        let mut client = Client::new(client_id);
+
+        let transaction = TransactionType::Deposit {
+            client: client_id,
+            tx,
+            amount,
+        };
+        client.deposit(amount, tx).expect("Deposit failed.");
+        client.processed_transactions.insert(tx, transaction);
+
+        // try to resolve a transaction that is not under dispute
+        assert!(client.resolve(tx).is_err());
+
+        client.dispute(tx).expect("Could not dispute transaction.");
+
+        client
+            .resolve(tx)
+            .expect("Could not resolve disputed transaction.");
+
+        assert_eq!(client.available, amount);
+        assert_eq!(client.held, Decimal::new(0, 0));
+        assert!(!client.disputed_transactions.contains(&tx));
+    }
+
+    #[test]
+    fn test_chargeback() {
+        let client_id = 1;
+        let tx = 1;
+        let amount = Decimal::new(1, 0);
+        let mut client = Client::new(client_id);
+
+        let transaction = TransactionType::Deposit {
+            client: client_id,
+            tx,
+            amount,
+        };
+        client.deposit(amount, tx).expect("Deposit failed.");
+        client.processed_transactions.insert(tx, transaction);
+
+        // try to chargeback a transaction that is not under dispute
+        assert!(client.chargeback(tx).is_err());
+
+        client.dispute(tx).expect("Could not dispute transaction.");
+
+        assert_eq!(client.available, Decimal::new(0, 0));
+        assert_eq!(client.held, Decimal::new(1, 0));
+        assert_eq!(client.total, Decimal::new(1, 0));
+
+        // check that withdrawal fails with funds under dispute
+        assert!(client.withdrawal(Decimal::new(1, 0), 2).is_err());
+
+        client
+            .chargeback(tx)
+            .expect("Could not chargeback transaction.");
+        assert_eq!(client.available, Decimal::new(0, 0));
+        assert_eq!(client.held, Decimal::new(0, 0));
+        assert_eq!(client.total, Decimal::new(0, 0));
+
+        assert!(client.chargeback(tx).is_err());
     }
 }
