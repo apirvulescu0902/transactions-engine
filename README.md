@@ -13,10 +13,11 @@ This transaction engine treats all the lines form the input csv file as transact
 3. `client.rs` defines the state of a client account: the total amount, the amount that it is under dispute, the amount that is available, whether of not the account is locked, a list with all processed transactions and a list with transactions that are currently under dispute. A transaction will only be processed if the account of the client has not been locked.
 
 ## How to run
-In order to run the examples from this repo with logs disabled the following command can be used:
+In order to run the examples from this repo the following command can be used:
 ```
-RUST_LOG=off cargo run <input_file> > <output_file> 
+cargo run <input_file> > <output_file>
 ```
+Logs are disabled by default, if you want to enable them, set RUST_LOG with the targeted log level.
 
 ## Testing
 The core modules include unit tests. Some example inputs are also included in the `examples/` folder.

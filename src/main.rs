@@ -1,7 +1,7 @@
 use csv::{ReaderBuilder, Trim};
 use engine::TransactionsEngine;
 use std::fs::File;
-use tracing::{Level, debug, error, info};
+use tracing::{debug, error, info};
 use tracing_subscriber::EnvFilter;
 use types::{TransactionRecord, TransactionType};
 
@@ -10,10 +10,13 @@ mod engine;
 mod types;
 
 fn main() {
-    // Initialize tracing subscriber
+    // Logs disabled by default, use RUST_LOG to set the log level
     tracing_subscriber::fmt()
-        .with_max_level(Level::TRACE)
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive("off".parse().expect("Invalid default directive"))
+                .from_env_lossy(),
+        )
         .init();
 
     let args: Vec<String> = std::env::args().collect();
